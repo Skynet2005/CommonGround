@@ -81,3 +81,20 @@ test("record titles and fields are bounded for offline use",()=>{
  assert.equal(row.reference.length,500);
  assert.equal(isOperations({...emptyOperations(),members:null}),false);
 });
+
+test("record revision and archive retain history, while approved allocations resist rewriting",async()=>{
+ let w=await applyOperation(emptyOperations(),{type:"add",kind:"meetings",data:{title:"Board work session",date:"2026-10-21"}});
+ const old=w.meetings[0];
+ w=await applyOperation(w,{type:"edit",kind:"meetings",id:old.id,data:{title:"Meeting agenda revised",date:"2026-10-22"}});
+ assert.equal(w.meetings[0].title,"Meeting agenda revised");
+ assert.equal(w.events.at(-1).action,"Edited");
+ assert.equal(await verifyOperationsAudit(w),true);
+ w=await applyOperation(w,{type:"archive",kind:"meetings",id:old.id});
+ assert.ok(w.meetings[0].archivedAt);
+ assert.equal(await verifyOperationsAudit(w),true);
+ const tampered={...w,meetings:[{...w.meetings[0],title:"Secretly rewritten title"}]};
+ assert.equal(await verifyOperationsAudit(tampered),false);
+ w=await applyOperation(w,{type:"add",kind:"budgets",data:{category:"Insurance",amountCents:100000}});
+ w=await applyOperation(w,{type:"status",kind:"budgets",id:w.budgets[0].id,status:"Approved"});
+ await assert.rejects(applyOperation(w,{type:"edit",kind:"budgets",id:w.budgets[0].id,data:{amountCents:200000}}),/cannot be rewritten/);
+});

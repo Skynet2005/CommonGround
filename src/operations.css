@@ -100,3 +100,11 @@
 .ops-feedback.success{color:#387b61;background:#eff9f1;border:1px solid #d1e9da}
 @media(max-width:1060px){.ops-layout{grid-template-columns:1fr}.ops-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}.ops-tabs button{flex-direction:column;text-align:center;justify-content:center;padding:12px 8px}.ops-tabs button>small{display:none}}
 @media(max-width:720px){.ops-security,.ops-community{flex-wrap:wrap}.ops-security button{width:100%;justify-content:center}.ops-kpis{grid-template-columns:repeat(2,1fr)}.ops-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.ops-form-grid{grid-template-columns:1fr}.ops-create-top{flex-wrap:wrap}.ops-main{padding:14px}.ops-community form{width:100%}.ops-community input{flex:1}.ops-finance{grid-template-columns:1fr}.ops-audit>div:not(.ops-audit-head){align-items:flex-start;flex-direction:column;gap:4px}.ops-record-footer{flex-wrap:wrap}}
+
+.ops-security-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ops-security-actions .ops-delete{border-color:#e8ada680;color:#f6d7d1;background:#763d3d44}
+.ops-record-actions{display:flex;gap:9px;align-items:center;margin-top:11px}
+.ops-record-actions button{display:flex;gap:6px;align-items:center;font-size:10px;font-weight:700;color:#387f78;background:#f0f8f5;border:1px solid #e0ede8;border-radius:7px;padding:7px 10px}
+.ops-record-actions button:last-child{color:#a57758;background:#fff8f3;border-color:#f1e1d4}
+.ops-record-actions>span{font-size:10px;color:#a48665;font-weight:700}
+@media(max-width:720px){.ops-security-actions{width:100%}.ops-security-actions button{flex:1}}

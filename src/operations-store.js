@@ -92,6 +92,8 @@ export async function digestRecord(value){
 export async function appendAudit(state,change){
  const prev=state.events.at(-1)?.digest||"GENESIS";
  const event={id:uid(),when:new Date().toISOString(),action:plain(change.action,60),kind:plain(change.kind,45),itemId:plain(change.itemId,70),details:plain(change.details,250),previous:prev};
+ const {events:_events,...snapshot}=state;
+ event.snapshotDigest=await digestRecord(snapshot);
  event.digest=await digestRecord(event);
  return {...state,events:[...state.events,event]};
 }
@@ -104,6 +106,8 @@ export async function verifyOperationsAudit(state){
   if(await digestRecord(source)!==digest)return false;
   prev=digest;
  }
+ const latest=state.events.at(-1);
+ if(latest?.snapshotDigest){const {events:_events,...snapshot}=state;if(await digestRecord(snapshot)!==latest.snapshotDigest)return false;}
  return true;
 }
 function cleanDate(d){if(typeof d!=="string"||!(/^\d{4}-\d{2}-\d{2}$/.test(d)))return "";const date=new Date(d+"T00:00:00Z");return Number.isNaN(+date)||date.toISOString().slice(0,10)!==d?"":d}
@@ -144,6 +148,27 @@ export async function applyOperation(state,action){
   if(kind==="expenses"){item.ledger=[{account:"expense:"+item.category,debit:item.amountCents,credit:0},{account:"illustrative_cash",debit:0,credit:item.amountCents}];}
   const next={...state,[kind]:[item,...state[kind]]};
   return appendAudit(next,{action:"Created",kind,itemId:item.id,details:plain(item.title||item.vendor||item.category||item.question||item.name,150)});
+ }
+ if(action.type==="edit"){
+  if(kind==="expenses")throw Error("Journal entries cannot be rewritten. Enter a reversal instead.");
+  const item=state[kind].find(x=>x.id===action.id);
+  if(!item)throw Error("Record not found");
+  if(kind==="budgets"&&item.status==="Approved")throw Error("Approved allocations cannot be rewritten. Create a new draft.");
+  if(kind==="polls"&&item.responses.length)throw Error("Polls with responses cannot be edited. Close the poll and open a new one.");
+  const data=validateEntry(kind,{...item,...action.data});
+  const changeKeys=Object.keys(data).filter(key=>key!=="status"&&JSON.stringify(data[key])!==JSON.stringify(item[key]));
+  if(!changeKeys.length)return state;
+  const modified={...item,...Object.fromEntries(changeKeys.map(key=>[key,data[key]])),updatedAt:new Date().toISOString()};
+  const next={...state,[kind]:state[kind].map(x=>x.id===item.id?modified:x)};
+  return appendAudit(next,{action:"Edited",kind,itemId:item.id,details:"Updated fields: "+changeKeys.join(", ")});
+ }
+ if(action.type==="archive"){
+  if(kind==="expenses"||kind==="budgets")throw Error("Financial entries remain in the illustrative history.");
+  const item=state[kind].find(x=>x.id===action.id);
+  if(!item)throw Error("Record not found");
+  if(item.archivedAt)return state;
+  const next={...state,[kind]:state[kind].map(x=>x.id===item.id?{...x,archivedAt:new Date().toISOString()}:x)};
+  return appendAudit(next,{action:"Archived",kind,itemId:item.id,details:"Archived record "+plain(item.title||item.name||item.vendor||item.question,150)});
  }
  if(action.type==="status"){
   const item=state[kind].find(x=>x.id===action.id);

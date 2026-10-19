@@ -83,10 +83,10 @@ export default function Operations(){
  const [exists,setExists]=useState(null),[password,setPassword]=useState(""),[show,setShow]=useState(false);
  const [workspace,setWorkspace]=useState(null),[tab,setTab]=useState("members"),[form,setForm]=useState({});
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
- const [creating,setCreating]=useState(false),[communityDraft,setCommunityDraft]=useState(""),[fileBusy,setFileBusy]=useState(false);
+ const [creating,setCreating]=useState(false),[editing,setEditing]=useState(null),[communityDraft,setCommunityDraft]=useState(""),[fileBusy,setFileBusy]=useState(false);
  const passRef=useRef(""),revisionRef=useRef(0),stateRef=useRef(null),importRef=useRef(null),savingRef=useRef(false);
  useEffect(()=>{hasOperations().then(setExists).catch(e=>setError(e.message))},[]);
- function lock(){passRef.current="";stateRef.current=null;setWorkspace(null);setPassword("");setForm({});setSuccess("");}
+ function lock(){passRef.current="";stateRef.current=null;setWorkspace(null);setPassword("");setForm({});setEditing(null);setSuccess("");}
  async function unlock(e){
   e.preventDefault();if(password.length<12)return setError("Use at least 12 characters for the passphrase.");
   setBusy(true);setError("");
@@ -114,9 +114,30 @@ export default function Operations(){
    const input={...form};
    if(kind==="budgets"||kind==="expenses"||(kind==="bids"&&input.amount))input.amountCents=parseMoney(input.amount);
    if(kind==="polls")input.choices=String(input.choices||"").split("|").map(v=>v.trim());
-   const saved=await commit(state=>applyOperation(state,{type:"add",kind,data:input}));
-   if(saved){setForm({});setCreating(false);}
+   const saved=await commit(state=>applyOperation(state,{type:editing?"edit":"add",kind,id:editing||undefined,data:input}));
+   if(saved){setForm({});setCreating(false);setEditing(null);}
   }catch(err){setError(err.message)}
+ }
+ function startEdit(item){
+  if(item.kind==="expenses"||item.archivedAt)return;
+  if(item.kind==="budgets"&&item.status==="Approved")return;
+  if(item.kind==="polls"&&item.responses.length)return;
+  const draft={...item};
+  if(draft.amountCents)draft.amount=(draft.amountCents/100).toFixed(2);
+  if(Array.isArray(draft.choices))draft.choices=draft.choices.join(" | ");
+  if(tab==="finance")draft.mode="budget";
+  setEditing(item.id);setForm(draft);setCreating(true);setError("");
+ }
+ async function archiveItem(item){
+  if(!confirm("Archive this local record? Its details will remain in your encrypted history."))return;
+  await commit(state=>applyOperation(state,{type:"archive",kind:item.kind,id:item.id}));
+ }
+ async function destroyWorkspace(){
+  if(!confirm("Delete the complete encrypted operations workspace from this browser? Export a backup first."))return;
+  if(!confirm("This cannot be undone without an encrypted backup and its passphrase. Continue?"))return;
+  setBusy(true);setError("");
+  try{await removeOperations(revisionRef.current);lock();setExists(false);setSuccess("Operations metadata deleted. Encrypted document attachments remain in Evidence vault.");}
+  catch(e){setError(e.message)}finally{setBusy(false)}
  }
  async function saveCommunity(e){
   e.preventDefault();
@@ -149,21 +170,22 @@ export default function Operations(){
  const items=workspace?tab==="finance"?[...workspace.budgets.map(x=>({...x,kind:"budgets"})),...workspace.expenses.map(x=>({...x,kind:"expenses"}))].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)):workspace[tab].map(x=>({...x,kind:tab})):[];
  return <div className="operations-page"><div className="section-head"><div><div className="eyebrow">COMMUNITY OPERATIONS</div><h2>Manage the work. Document the decisions.</h2><p>Track community processes in one encrypted, private workspace with a consistent activity history.</p></div>{workspace?<button className="btn outline" onClick={lock}><LockKeyhole size={15}/> Lock workspace</button>:null}</div>
  {!workspace?<div className="ops-entry"><div className="ops-entry-symbol"><LockKeyhole size={30}/></div><h3>{exists===false?"Create your encrypted workspace":"Unlock your private workspace"}</h3><p>{OPERATIONS_NOTICE}</p><form onSubmit={unlock}><label className="ops-field"><span>{exists===false?"Create a recovery passphrase":"Workspace passphrase"}</span><span className="ops-pass"><input autoComplete="off" spellCheck="false" type={show?"text":"password"} minLength="12" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 12 characters"/><button type="button" aria-label={show?"Hide passphrase":"Show passphrase"} onClick={()=>setShow(x=>!x)}>{show?<EyeOff size={17}/>:<Eye size={17}/>}</button></span></label><button className="btn" disabled={busy||password.length<12} type="submit"><UnlockKeyhole size={16}/>{busy?"Decrypting…":exists===false?"Create private workspace":"Unlock workspace"}</button></form><p className="ops-caution">The passphrase is never saved. Without your passphrase or exported encrypted backup, your workspace may be unrecoverable. Records aren't automatically synchronized between devices.</p><button className="ops-restore-button" disabled={busy} onClick={()=>importRef.current?.click()}><Upload size={15}/> Restore encrypted operations backup</button><input ref={importRef} type="file" accept=".json,application/json" hidden onChange={restoreFile}/></div>:
- <><div className="ops-security"><div><ShieldCheck size={19}/><span><b>Local encrypted mode</b><small>{OPERATIONS_NOTICE}</small></span></div><button type="button" onClick={encryptedExport} disabled={busy}><Download size={15}/> Export encrypted backup</button></div>
+ <><div className="ops-security"><div><ShieldCheck size={19}/><span><b>Local encrypted mode</b><small>{OPERATIONS_NOTICE}</small></span></div><div className="ops-security-actions"><button type="button" onClick={encryptedExport} disabled={busy}><Download size={15}/> Export encrypted backup</button><button type="button" className="ops-delete" onClick={destroyWorkspace} disabled={busy}><Trash2 size={15}/> Erase metadata</button></div></div>
  <div className="ops-community"><div><span>PRIVATE COMMUNITY LABEL</span><h3>{workspace.community||"No community selected"}</h3></div><form onSubmit={saveCommunity}><input value={communityDraft} maxLength="200" placeholder="Community reference (avoid private details)" onChange={e=>setCommunityDraft(e.target.value)}/><button className="btn outline" disabled={busy||!communityDraft.trim()} type="submit">Save label</button></form></div>
  <div className="ops-kpis"><div><b>{workspace.members.length}</b><small>Self-reported people</small></div><div><b>{workspace.requests.filter(x=>x.status!=="Completed"&&x.status!=="Canceled").length}</b><small>Active requests</small></div><div><b>{workspace.meetings.length}</b><small>Tracked meetings</small></div><div><b>{workspace.events.length}</b><small>Local audit events</small></div></div>
- <div className="ops-layout"><nav className="ops-tabs" aria-label="Community operations modules">{TABS.map(x=>{const Icon=x.icon;return <button key={x.id} className={tab===x.id?"active":""} onClick={()=>{setTab(x.id);setForm({});setCreating(false)}}><Icon size={18}/><span>{x.name}</span><small>{moduleCount(workspace,x.id)}</small></button>})}</nav>
- <section className="ops-main"><div className="ops-main-header"><div><div className="eyebrow">{TABS.find(x=>x.id===tab).summary}</div><h3>{TABS.find(x=>x.id===tab).name}</h3></div><button className="btn" onClick={()=>{setCreating(x=>!x);setForm({mode:"budget"})}}><Plus size={15}/>{creating?"Close form":"New record"}</button></div>
+ <div className="ops-layout"><nav className="ops-tabs" aria-label="Community operations modules">{TABS.map(x=>{const Icon=x.icon;return <button key={x.id} className={tab===x.id?"active":""} onClick={()=>{setTab(x.id);setForm({});setCreating(false);setEditing(null)}}><Icon size={18}/><span>{x.name}</span><small>{moduleCount(workspace,x.id)}</small></button>})}</nav>
+ <section className="ops-main"><div className="ops-main-header"><div><div className="eyebrow">{TABS.find(x=>x.id===tab).summary}</div><h3>{TABS.find(x=>x.id===tab).name}</h3></div><button className="btn" onClick={()=>{setCreating(x=>!x);setEditing(null);setForm({mode:"budget"})}}><Plus size={15}/>{creating?"Close form":"New record"}</button></div>
  {tab==="finance"?<div className="ops-finance"><div><small>Approved allocations (illustrative)</small><b>{money(report.planned)}</b></div><div><small>Net example spending</small><b>{money(report.netExpense)}</b></div><div><small>Illustrative remaining</small><b>{money(report.remaining)}</b></div><div className={report.balanced?"balanced":"unbalanced"}><CheckCircle2 size={17}/>{report.balanced?"All example entries balance":"Unbalanced example entries"}</div></div>:null}
  {creating?<form className="ops-create" onSubmit={create}>
-  <div className="ops-create-top"><b>Add {tab==="finance"?"financial record":TABS.find(x=>x.id===tab).name.toLowerCase()+" record"}</b><span>Stored only in the encrypted browser workspace</span></div>
-  {tab==="finance"?<label className="ops-field"><span>Record type</span><select value={form.mode||"budget"} onChange={e=>setForm({mode:e.target.value})}><option value="budget">Planned budget allocation</option><option value="expense">Illustrative expense journal entry</option></select></label>:null}
+  <div className="ops-create-top"><b>{editing?"Edit record":"Add "+(tab==="finance"?"financial record":TABS.find(x=>x.id===tab).name.toLowerCase()+" record")}</b><span>Stored only in the encrypted browser workspace</span></div>
+  {tab==="finance"?<label className="ops-field"><span>Record type</span><select disabled={!!editing} value={form.mode||"budget"} onChange={e=>setForm({mode:e.target.value})}><option value="budget">Planned budget allocation</option><option value="expense">Illustrative expense journal entry</option></select></label>:null}
   <div className="ops-form-grid">{FIELDS[tab==="finance"?(form.mode==="expense"?"expenses":"budgets"):tab].map(f=><Field key={f[0]} spec={f} form={form} onChange={(k,v)=>setForm(s=>({...s,[k]:v}))}/>)}</div>
   <div className="ops-legal-note"><Info size={16}/>{tab==="notices"?"This saves a draft only. It is not served and does not calculate a legal deadline.":tab==="polls"?"This is an informal feedback poll, not a legally compliant HOA election.":tab==="finance"?"No real funds, invoices or accounts are changed. Values are illustrative only.":"Use descriptive, non-sensitive identifiers. These records are not independently authenticated."}</div>
-  <button type="submit" className="btn" disabled={busy}><Plus size={15}/> Encrypt and save record</button>
+  <button type="submit" className="btn" disabled={busy}><Plus size={15}/> {editing?"Save revised record":"Encrypt and save record"}</button>
  </form>:null}
  {items.length===0?<div className="ops-empty"><span><FolderOpen size={25}/></span><h4>No records yet</h4><p>Start by creating a record. It will be encrypted locally and included in the workspace audit history.</p></div>:
- <div className="ops-records">{items.map(item=><article className="ops-record" key={item.id}><div className="ops-record-top"><div><small>{item.kind==="budgets"?"BUDGET ALLOCATION":item.kind==="expenses"?"ILLUSTRATIVE LEDGER":TABS.find(t=>t.id===tab)?.name.toUpperCase()}</small><h4>{labelFor(item,item.kind)}</h4><p>{supporting(item,item.kind)}</p></div>{item.kind!=="expenses"?<SetStatus kind={item.kind} item={item} disabled={busy} onChange={(id,status)=>changeStatus(item.kind,id,status)}/>:<span className="ops-static-status">{item.reverses?"Compensating entry":item.status}</span>}</div>
+ <div className="ops-records">{items.map(item=><article className="ops-record" key={item.id}><div className="ops-record-top"><div><small>{item.kind==="budgets"?"BUDGET ALLOCATION":item.kind==="expenses"?"ILLUSTRATIVE LEDGER":TABS.find(t=>t.id===tab)?.name.toUpperCase()}</small><h4>{labelFor(item,item.kind)}</h4><p>{supporting(item,item.kind)}</p></div>{item.kind!=="expenses"?<SetStatus kind={item.kind} item={item} disabled={busy||!!item.archivedAt} onChange={(id,status)=>changeStatus(item.kind,id,status)}/>:<span className="ops-static-status">{item.reverses?"Compensating entry":item.status}</span>}</div>
+ <div className="ops-record-actions">{item.archivedAt?<span>Archived locally</span>:<>{item.kind!=="expenses"&&(item.kind!=="budgets"||item.status!=="Approved")&&(item.kind!=="polls"||!item.responses.length)?<button type="button" disabled={busy} onClick={()=>startEdit(item)}><FileText size={13}/> Edit</button>:null}{item.kind!=="expenses"&&item.kind!=="budgets"?<button type="button" disabled={busy} onClick={()=>archiveItem(item)}><FolderOpen size={13}/> Archive</button>:null}</>}</div>
  {item.detail||item.message||item.notes||item.conflict?<div className="ops-record-notes">{[item.detail,item.message,item.notes,item.conflict].filter(Boolean).map((value,i)=><p key={i}>{value}</p>)}</div>:null}
  {item.kind==="expenses"?<div className="ops-ledger-lines">{item.ledger.map((line,i)=><div key={i}><span>{line.account.replaceAll("_"," ")}</span><span>Debit {money(line.debit)}</span><span>Credit {money(line.credit)}</span></div>)}{!item.reverses&&item.status==="Recorded"?<button type="button" disabled={busy} onClick={()=>reverseExpense(item.id)}><RotateCcw size={14}/> Enter reversal</button>:null}</div>:null}
  {item.kind==="documents"?<FileBin doc={item} passphrase={passRef.current} busy={busy||fileBusy} setBusy={setFileBusy} setError={setError} setSuccess={setSuccess}/>:null}
