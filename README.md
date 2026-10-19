@@ -1,3 +1,17 @@
+# CommonGround v0.5 — encrypted community operations
+
+**Live:** https://commonground-standalone.vercel.app
+
+The new **Community operations** section is a usable, passphrase-encrypted, browser-local workbench for community people/role records, meetings, maintenance, vendor bids, illustrative financial budgeting and journal entries, unsent notices, encrypted document attachments, and informal community feedback. It supports record editing, statuses, archiving, cross-tab revision checks, audit history, and encrypted backup and recovery.
+
+**Not a fully deployed multi-user HOA management service.** The Vercel project has no connected production PostgreSQL database, email identity provider or private object storage. Membership, delivery, accounting and voting actions in local operations are *not legally verified, transmitted, billed or binding*. Evidence attachments must be backed up separately from operations metadata in the Evidence vault. Existing sample case fields remain browser-local and unencrypted.
+
+Documentation: [Operations module](docs/operations-v05.md) | [Production release gates](docs/release-gates.md) | [Database deployment](docs/deployment-runbook.md).
+
+Verified before merge: 36 passing automated tests, including real IndexedDB-compatible encryption, stale-tab writes and backup recovery. Node/Vite production build passed.
+
+---
+
 # CommonGround
 
 This is the dedicated standalone source repository for the CommonGround HOA procedural-fairness platform.
