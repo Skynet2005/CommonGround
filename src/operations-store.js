@@ -128,9 +128,9 @@ export function validateEntry(kind,form){
   else if(key==="choices"){const choices=Array.isArray(form.choices)?form.choices.map(x=>plain(x,100)).filter(Boolean):[];if(choices.length<2||choices.length>8||new Set(choices.map(x=>x.toLowerCase())).size!==choices.length)throw Error("Provide 2–8 distinct choices.");o.choices=choices;}
   else o[key]=plain(form[key],key==="message"||key==="detail"?2400:500);
  }
+ if(kind==="meetings"&&!o.date)throw Error("Select a valid meeting date.");
  for(const key of spec[kind].required)if(o[key]===undefined||o[key]===""||o[key]===0)throw Error("Missing required field: "+key);
  if(form.status && !spec[kind].statuses.includes(o.status))throw Error("Invalid status.");
- if(kind==="meetings"&&!o.date)throw Error("Select a valid meeting date.");
  return o;
 }
 export async function applyOperation(state,action){

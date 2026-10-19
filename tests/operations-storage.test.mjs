@@ -1,0 +1,42 @@
+import "fake-indexeddb/auto";
+import test from "node:test";
+import assert from "node:assert/strict";
+import {emptyOperations,hasOperations,readOperations,saveOperations,applyOperation,encryptedBackupRecord,restoreEncryptedOperations,removeOperations} from "../src/operations-store.js";
+
+test("encrypted operations persist in IndexedDB and reject wrong passphrases",async()=>{
+ const pass="not-a-real-production-key-123";
+ assert.equal(await hasOperations(),false);
+ const revision1=await saveOperations(emptyOperations(),pass,0);
+ assert.equal(revision1,1);
+ assert.equal(await hasOperations(),true);
+ let loaded=await readOperations(pass);
+ assert.equal(loaded.revision,1);
+ assert.equal(loaded.workspace.schemaVersion,1);
+ await assert.rejects(readOperations("wrong-passphrase-123"),/Unable to decrypt/);
+ const updated=await applyOperation(loaded.workspace,{type:"add",kind:"requests",data:{title:"Lighting inspection",detail:"Light fixture has not been assessed."}});
+ const revision2=await saveOperations(updated,pass,revision1);
+ assert.equal(revision2,2);
+ loaded=await readOperations(pass);
+ assert.equal(loaded.workspace.requests.length,1);
+ assert.equal(loaded.revision,2);
+ await assert.rejects(saveOperations(updated,pass,1),/transaction canceled|Storage transaction|stale|Storage transaction failed/i);
+ const afterConflict=await readOperations(pass);
+ assert.equal(afterConflict.revision,2,"failed stale save must not replace newer record");
+});
+test("encrypted backup survives local deletion, and restores with intact event records",async()=>{
+ const pass="not-a-real-production-key-123";
+ const before=await readOperations(pass);
+ const encoded=await encryptedBackupRecord();
+ const blob=JSON.parse(encoded);
+ assert.equal(blob.format,"cg-operations-encrypted-backup-v1");
+ assert.ok(typeof blob.sealed.body==="string");
+ assert.ok(!encoded.includes("Lighting inspection"),"plaintext case records must not appear in ciphertext backup");
+ assert.ok(!encoded.includes("not-a-real-production-key-123"));
+ await removeOperations(before.revision);
+ assert.equal(await hasOperations(),false);
+ const restored=await restoreEncryptedOperations(encoded,pass,0);
+ assert.equal(restored.workspace.requests.length,1);
+ assert.equal(restored.revision,1);
+ const load=await readOperations(pass);
+ assert.equal(load.workspace.events.length,1);
+});
