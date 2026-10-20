@@ -1,3 +1,13 @@
+# CommonGround v0.7 — permissioned case-room foundation
+
+This release implements backend invitation issuance, verified-mailbox acceptance, room membership, owner revocation, private and shared append-only statements, and acknowledgment receipts, with a case-room interface in Shared Workspace. **None of these operations are enabled on the live site yet** because the standalone Vercel project has no production database or verified email-sending configuration. The public app remains browser-local.
+
+See [v0.7 collaboration and rollout guide](docs/collaboration-v07.md) and [existing local Trust Center](docs/trust-center-v06.md).
+
+Case guests are not automatically legally verified homeowners, association officers, agents, or professional reviewers. Shared messages in hosted PostgreSQL are NOT end-to-end encrypted. Do not place privileged or highly sensitive evidence into the beta room.
+
+---
+
 # CommonGround v0.6 — encrypted Trust Center
 
 **Live application:** https://commonground-standalone.vercel.app

@@ -17,7 +17,7 @@ export default async function handler(req,res){
   const actor=await session(req);
   if(!actor)return reply(res,401,{error:"Authentication required"});
   if(req.method==="GET"){
-   const result=await asActor(actor,client=>client.query(`SELECT id,title,category,status,summary,rule_reference,evidence_summary,
+   const result=await asActor(actor,client=>client.query(`SELECT id,created_by,title,category,status,summary,rule_reference,evidence_summary,
     proposed_resolution,created_at,updated_at,version FROM app.cases
     WHERE deleted_at IS NULL ORDER BY updated_at DESC LIMIT 100`));
    return reply(res,200,{cases:result.rows});

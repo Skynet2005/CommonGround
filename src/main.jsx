@@ -27,7 +27,7 @@ function Modal({title,children,onClose}){useEffect(()=>{const escape=e=>{if(e.ke
 function downloadText(name,body){const blob=new Blob([body],{type:"text/markdown;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
 function download(name,obj){const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
 function App(){
- const [page,setPage]=useState(()=>window.location.hash.startsWith("#auth_code=")?"shared":"overview");
+ const [page,setPage]=useState(()=>["#auth_code=","#invite_code="].some(x=>window.location.hash.startsWith(x))?"shared":"overview");
  const [cases,setCases]=useState(()=>load("cg.cases.v1",STARTER_CASES));
  const [customSources,setSources]=useState(()=>load("cg.sources.v1",[]));
  const [charter,setCharter]=useState(()=>load("cg.charter.v1",{}));
