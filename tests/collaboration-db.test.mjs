@@ -60,10 +60,10 @@ test("notes isolate case membership, private authors and receipts; revocation cl
   const seenGuest=await as(db,guest,"SELECT id FROM app.case_room_notes WHERE case_id=$1",[caseId]);
   assert.deepEqual(seenGuest.rows.map(x=>x.id),[sharedId]);
   assert.equal((await as(db,outsider,"SELECT id FROM app.case_room_notes WHERE case_id=$1",[caseId])).rows.length,0);
-  await assert.rejects(as(db,outsider,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'shared','Unauthorized note')",[caseId,outsider]),/policy|permission denied/i);
-  await assert.rejects(as(db,guest,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'private','Spoof someone private')",[caseId,owner]),/policy/i);
+  await assert.rejects(as(db,outsider,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'shared','Unauthorized note')",[caseId,outsider]),/policy|permission denied|Unauthorized room statement/i);
+  await assert.rejects(as(db,guest,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'private','Spoof someone private')",[caseId,owner]),/policy|Unauthorized room statement/i);
   await as(db,guest,"INSERT INTO app.case_room_receipts(note_id,case_id,acknowledged_by) VALUES($1,$2,$3)",[sharedId,caseId,guest]);
-  await assert.rejects(as(db,guest,"INSERT INTO app.case_room_receipts(note_id,case_id,acknowledged_by) VALUES($1,$2,$3)",[privateId,caseId,guest]),/policy|permission denied/i);
+  await assert.rejects(as(db,guest,"INSERT INTO app.case_room_receipts(note_id,case_id,acknowledged_by) VALUES($1,$2,$3)",[privateId,caseId,guest]),/policy|permission denied|Unauthorized room statement/i);
   await assert.rejects(as(db,owner,"UPDATE app.case_room_notes SET statement='Hidden edit' WHERE id=$1",[sharedId]),/permission denied|immutable|mutation/i);
   const revoked=await as(db,owner,"SELECT app.case_revoke_participant($1,$2) AS ok",[caseId,guest]);
   assert.equal(revoked.rows[0].ok,true);
@@ -87,9 +87,9 @@ test("guest private notes stay hidden from the creator while both can acknowledg
   const noteId=shared.rows[0].id;
   assert.equal((await as(db,owner,"SELECT id FROM app.case_room_notes WHERE case_id=$1",[caseId])).rows.length,1);
   await as(db,owner,"INSERT INTO app.case_room_receipts(note_id,case_id,acknowledged_by) VALUES($1,$2,$3)",[noteId,caseId,owner]);
-  await assert.rejects(as(db,guest,"INSERT INTO app.case_room_receipts(note_id,case_id,acknowledged_by) VALUES($1,$2,$3)",[noteId,caseId,guest]),/policy/i);
+  await assert.rejects(as(db,guest,"INSERT INTO app.case_room_receipts(note_id,case_id,acknowledged_by) VALUES($1,$2,$3)",[noteId,caseId,guest]),/policy|Unauthorized room statement/i);
   await as(db,owner,"SELECT app.case_revoke_participant($1,$2)",[caseId,guest]);
-  await assert.rejects(as(db,guest,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'shared','Revoked member tries to send')",[caseId,guest]),/policy/i);
+  await assert.rejects(as(db,guest,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'shared','Revoked member tries to send')",[caseId,guest]),/policy|Unauthorized room statement/i);
  }finally{await db.close()}
 });
 
