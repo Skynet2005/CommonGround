@@ -1,3 +1,15 @@
+# CommonGround v0.5.1 — Startup reliability and product review
+
+- A production blank-screen hotfix restored the missing Community Operations icon import.
+- Separate module-loading recovery and React error boundary preserve a path to local case backup and retry.
+- A startup integration test renders the real React application and navigates to Community Operations.
+- ESLint no-undef checks frontend imports/global identifiers in every pull request to prevent this specific regression.
+- Deep source-aware [engineering and differentiated feature review](docs/elite-product-audit-2026.md), with phased acceptance gates.
+
+**Important:** Local case text is not encrypted. The separate Operations and Evidence Vault data are browser-only, encrypted separately and require separate backups. Hosted multi-user database services remain disabled pending secure provisioning.
+
+---
+
 # CommonGround v0.5 — encrypted community operations
 
 **Live:** https://commonground-standalone.vercel.app

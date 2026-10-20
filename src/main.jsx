@@ -27,7 +27,7 @@ function Modal({title,children,onClose}){useEffect(()=>{const escape=e=>{if(e.ke
 function downloadText(name,body){const blob=new Blob([body],{type:"text/markdown;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
 function download(name,obj){const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
 function App(){
- const [page,setPage]=useState("overview");
+ const [page,setPage]=useState(()=>window.location.hash.startsWith("#auth_code=")?"shared":"overview");
  const [cases,setCases]=useState(()=>load("cg.cases.v1",STARTER_CASES));
  const [customSources,setSources]=useState(()=>load("cg.sources.v1",[]));
  const [charter,setCharter]=useState(()=>load("cg.charter.v1",{}));
@@ -62,7 +62,7 @@ function App(){
    <div className="workspace-identity"><span className="workspace-avatar">C</span><div><strong>Community workspace</strong><small>Florida · Local prototype</small></div><ChevronRight size={15}/></div>
    <div className="nav-label">WORKSPACE</div>
    <nav aria-label="Main navigation">{MENU.map(([key,label,Icon])=><button key={key} className={"nav-link "+(page===key?"active":"")} onClick={()=>navigate(key)}><Icon size={19} strokeWidth={1.8}/><span>{label}</span>{key==="cases"&&openCases?<i>{openCases}</i>:null}</button>)}</nav>
-   <div className="sidebar-bottom"><div className="pilot-note"><span className="pilot-mini"><ShieldCheck size={17}/><b>Trust begins with clarity</b></span><p>Designed for fair processes. No automated fines or binding legal decisions.</p><a href="https://www.flsenate.gov/Laws/Statutes/2026/Chapter720" target="_blank" rel="noreferrer">Florida Chapter 720 <ArrowUpRight size={13}/></a></div><div className="sidebar-footer"><span className="live-dot"/> Independent by design <span>v0.1</span></div></div>
+   <div className="sidebar-bottom"><div className="pilot-note"><span className="pilot-mini"><ShieldCheck size={17}/><b>Trust begins with clarity</b></span><p>Designed for fair processes. No automated fines or binding legal decisions.</p><a href="https://www.flsenate.gov/Laws/Statutes/2026/Chapter720" target="_blank" rel="noreferrer">Florida Chapter 720 <ArrowUpRight size={13}/></a></div><div className="sidebar-footer"><span className="live-dot"/> Independent by design <span>v0.5.1</span></div></div>
   </aside>
   <main className="main">
    <header className="topbar"><div className="top-left"><button className="mobile-trigger icon-button" onClick={()=>setMobileOpen(true)} aria-label="Open menu"><Menu size={22}/></button><span className="crumb">Workspace</span><ChevronRight size={14} color="#9aa6b4"/><strong>{MENU.find(x=>x[0]===page)?.[1]}</strong></div><div className="top-right"><Chip kind="local"><span className="live-dot"/> LOCAL DEMO</Chip><button className="help-button" onClick={()=>navigate("settings")}><Info size={17}/> About this prototype</button><span className="profile-circle">CG</span></div></header>
@@ -109,4 +109,29 @@ function CaseDetail({c,back,update,exportCase}){
  {tab==="vault"?<VaultView caseId={c.id} compact/>:null}
  <div className="panel padded record-panel"><h3>Add an activity note</h3><p className="muted">Document new information, correspondence or agreement without claiming it has been verified.</p><div className="form-grid"><div className="field"><Label>Event type</Label><select value={action} onChange={e=>setAction(e.target.value)}>{["Response recorded","Evidence described","Discussion held","Offer proposed","Agreement reported","Concern raised","Other update"].map(x=><option key={x}>{x}</option>)}</select></div><Field label="Note" value={note} onChange={setNote} placeholder="Summarize what happened (redacted)"/></div><Button icon={Send} disabled={!note.trim()} onClick={async()=>{await update(c,{},action,note.slice(0,12000));setNote("");setTab("timeline")}}>Append activity event</Button></div></>;
 }
-createRoot(document.getElementById("root")).render(<App/>);
+class AppErrorBoundary extends React.Component{
+ constructor(props){super(props);this.state={error:null}}
+ static getDerivedStateFromError(error){return {error}}
+ componentDidCatch(error,info){console.error("CommonGround render error",error,info.componentStack)}
+ render(){
+  if(!this.state.error)return this.props.children;
+  return <main style={{maxWidth:650,margin:"9vh auto",padding:28,fontFamily:"system-ui",lineHeight:1.65,color:"#244455"}}>
+   <strong style={{color:"#268973"}}>CommonGround</strong>
+   <h1>Something interrupted your workspace.</h1>
+   <p>We kept your browser data in place. This may be caused by an outdated or corrupted local record. You can export your local case data before trying a reset.</p>
+   <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+    <button type="button" className="btn" onClick={()=>location.reload()}>Reload application</button>
+    <button type="button" className="btn outline" onClick={()=>{
+     if(!confirm("This file contains unencrypted local case details. Export privately?"))return;
+     try{
+      const keys=["cg.cases.v1","cg.sources.v1","cg.charter.v1"];
+      download("commonground-case-recovery.json",{format:"commonground-recovery-v1",exportedAt:new Date().toISOString(),data:Object.fromEntries(keys.map(k=>[k,localStorage.getItem(k)]))});
+     }catch(error){alert("Data export unavailable: "+error.message)}
+    }}>Export local case backup</button>
+   </div>
+   <p style={{color:"#81919a",fontSize:12,marginTop:22}}>This backup does not include encrypted Operations or Evidence Vault data. Do not clear site data without separately exporting their backups.</p>
+  </main>
+ }
+}
+createRoot(document.getElementById("root")).render(<AppErrorBoundary><App/></AppErrorBoundary>);
+
