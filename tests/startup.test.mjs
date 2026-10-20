@@ -1,3 +1,4 @@
+import {readFile} from "node:fs/promises";
 import "fake-indexeddb/auto";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -32,4 +33,11 @@ test("the real React entry renders and Community Operations navigates without a 
   await server.close();
   win.happyDOM.cancelAsync();
  }
+});
+
+test("static document displays loading help before any JavaScript executes",async()=>{
+ const html=await readFile(new URL("../index.html",import.meta.url),"utf8");
+ assert.match(html,/Opening CommonGround/);
+ assert.match(html,/Do not clear site data/);
+ assert.match(html,/src\/bootstrap\.js/);
 });
