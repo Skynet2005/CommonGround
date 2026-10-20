@@ -46,7 +46,7 @@ test("invitation accepts only verified intended mailbox once, never elevates HOA
   const members=await as(db,guest,"SELECT * FROM app.case_room_members($1)",[caseId]);
   assert.equal(members.rows.length,2);
   assert.deepEqual(members.rows.map(x=>x.member_email).sort(),["guest@example.test","owner@example.test"]);
-  await assert.rejects(as(db,guest,"UPDATE app.cases SET title='Tampered' WHERE id=$1",[caseId]),/permission denied|policy/i);
+  const update=await as(db,guest,"UPDATE app.cases SET title='Changed' WHERE id=$1 RETURNING id",[caseId]); assert.equal(update.rows.length,0);
  }finally{await db.close()}
 });
 
@@ -59,7 +59,7 @@ test("notes isolate case membership, private authors and receipts; revocation cl
   const sharedId=(await as(db,owner,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'shared','Shared factual account for review') RETURNING id",[caseId,owner])).rows[0].id;
   const seenGuest=await as(db,guest,"SELECT id FROM app.case_room_notes WHERE case_id=$1",[caseId]);
   assert.deepEqual(seenGuest.rows.map(x=>x.id),[sharedId]);
-  assert.equal((await as(db,outsider,"SELECT id FROM app.case_room_notes WHERE case_id=$1",[caseId])).rowCount,0);
+  assert.equal((await as(db,outsider,"SELECT id FROM app.case_room_notes WHERE case_id=$1",[caseId])).rows.length,0);
   await assert.rejects(as(db,outsider,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'shared','Unauthorized note')",[caseId,outsider]),/policy|permission denied/i);
   await assert.rejects(as(db,guest,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'private','Spoof someone private')",[caseId,owner]),/policy/i);
   await as(db,guest,"INSERT INTO app.case_room_receipts(note_id,case_id,acknowledged_by) VALUES($1,$2,$3)",[sharedId,caseId,guest]);
@@ -67,9 +67,9 @@ test("notes isolate case membership, private authors and receipts; revocation cl
   await assert.rejects(as(db,owner,"UPDATE app.case_room_notes SET statement='Hidden edit' WHERE id=$1",[sharedId]),/permission denied|immutable|mutation/i);
   const revoked=await as(db,owner,"SELECT app.case_revoke_participant($1,$2) AS ok",[caseId,guest]);
   assert.equal(revoked.rows[0].ok,true);
-  assert.equal((await as(db,guest,"SELECT id FROM app.case_room_notes WHERE case_id=$1",[caseId])).rowCount,0);
-  assert.equal((await as(db,guest,"SELECT * FROM app.case_room_members($1)",[caseId])).rowCount,0);
+  assert.equal((await as(db,guest,"SELECT id FROM app.case_room_notes WHERE case_id=$1",[caseId])).rows.length,0);
+  assert.equal((await as(db,guest,"SELECT * FROM app.case_room_members($1)",[caseId])).rows.length,0);
   const oldInvite=await as(db,guest,"SELECT * FROM app.case_accept_invite($1)",[token]);
-  assert.equal(oldInvite.rowCount,0);
+  assert.equal(oldInvite.rows.length,0);
  }finally{await db.close()}
 });
