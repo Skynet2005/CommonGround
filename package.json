@@ -1,7 +1,7 @@
 {
   "name": "commonground",
   "private": true,
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "description": "Local-first Florida HOA procedural fairness and dispute workspace",
   "scripts": {
