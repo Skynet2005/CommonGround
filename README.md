@@ -1,3 +1,15 @@
+# CommonGround v0.6 — encrypted Trust Center
+
+**Live application:** https://commonground-standalone.vercel.app
+
+This release adds a RuleGraph, source-linked Decision Passports, attributed local homeowner/association positions, proposed independent reviewers, procedural documentation checks, exact-source comparison and portable (unencrypted) decision exports inside **Community operations → Trust Center**.
+
+Trust Center shares the existing passphrase-encrypted browser workspace. Existing v0.5 workspaces remain compatible and no sensitive material is automatically sent to any server. The platform is **not yet a verified, shared, legally binding HOA management service**. The standalone Vercel project currently has no database, email authentication or private document-cloud storage configured.
+
+Full functionality, technical scope, release gates and limitations: [v0.6 Trust Center guide](docs/trust-center-v06.md).
+
+---
+
 # CommonGround v0.5.1 — Startup reliability and product review
 
 - A production blank-screen hotfix restored the missing Community Operations icon import.
