@@ -48,6 +48,6 @@ if(root){
   const initial=document.createElement("div");
   initial.textContent="Opening CommonGround…";
   Object.assign(initial.style,{fontFamily:"system-ui,sans-serif",color:"#667f8b",padding:"32px",textAlign:"center"});
-  root.append(initial);
+  root.replaceChildren(initial);
 }
 import("./main.jsx").catch(launchFailure);
