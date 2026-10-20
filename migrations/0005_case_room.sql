@@ -125,7 +125,7 @@ END $$;
 
 CREATE FUNCTION app.case_pending_invites(target uuid)
 RETURNS TABLE(invite_id uuid,recipient_email text,issued_at timestamptz,expires_at timestamptz)
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=app,pg_temp AS $
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=app,pg_temp AS $$
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM app.cases
  WHERE id=target AND created_by=app.current_actor() AND deleted_at IS NULL)
@@ -134,7 +134,7 @@ BEGIN
  FROM app.case_invites i WHERE i.case_id=target
   AND i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.expires_at>now()
  ORDER BY i.created_at DESC;
-END $;
+END $$;
 
 CREATE FUNCTION app.case_accept_invite(token_hash text)
 RETURNS TABLE(accepted_case_id uuid, accepted_role text)

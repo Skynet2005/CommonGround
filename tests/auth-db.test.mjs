@@ -5,7 +5,7 @@ import {readFile} from "node:fs/promises";
 test("private database authentication functions are permissioned and replay-safe",async()=>{
  const db=new PGlite();
  try{
-  for(const p of ["0001_core","0002_domains","0003_account_bootstrap","0004_auth_privileges"])
+  for(const p of ["0001_core","0002_domains","0003_account_bootstrap","0004_auth_privileges","0005_case_room"])
    await db.exec(await readFile(new URL("../migrations/"+p+".sql",import.meta.url),"utf8"));
   await db.exec("CREATE ROLE commonground_runtime");
   await db.exec(await readFile(new URL("../ops/runtime-grants.sql",import.meta.url),"utf8"));
