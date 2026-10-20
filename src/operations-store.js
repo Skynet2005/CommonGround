@@ -41,7 +41,7 @@ export async function readOperations(passphrase){
  return {workspace:decoded,revision:value.revision};
 }
 export function isOperations(s){
- return !!(s&&s.schemaVersion===1&&MODULES.every(k=>Array.isArray(s[k])&&s[k].length<=1000)&&Array.isArray(s.events)&&s.events.length<=10000&&typeof s.community==="string"&&s.community.length<=200);
+ return !!(s&&s.schemaVersion===1&&MODULES.every(k=>Array.isArray(s[k])&&s[k].length<=1000)&&["rules","passports","positions","neutralReviews"].every(k=>s[k]===undefined||(Array.isArray(s[k])&&s[k].length<=1000))&&Array.isArray(s.events)&&s.events.length<=10000&&typeof s.community==="string"&&s.community.length<=200);
 }
 export async function saveOperations(workspace,passphrase,expectedRevision){
  if(!isOperations(workspace))throw Error("Invalid operations workspace.");
