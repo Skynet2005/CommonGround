@@ -1,7 +1,7 @@
 
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {createRoot} from "react-dom/client";
-import {LayoutDashboard,FolderOpen,BookOpen,Scale,Users,Settings,ShieldCheck,Plus,Search,ArrowRight,ArrowLeft,Download,Upload,FileText,CheckCircle2,AlertTriangle,Clock,ChevronRight,Menu,X,ClipboardCheck,LockKeyhole,Eye,Activity,Check,ExternalLink,Copy,RotateCcw,MessageCircle,CalendarDays,Filter,ArrowUpRight,Info,FileWarning,ShieldAlert,HeartHandshake,Database,Send,PanelLeftClose,Flag,BookMarked} from "lucide-react";
+import {LayoutDashboard,FolderOpen,BookOpen,Scale,Users,Settings,ShieldCheck,Plus,Search,ArrowRight,ArrowLeft,Download,Upload,FileText,CheckCircle2,AlertTriangle,Clock,ChevronRight,Menu,X,ClipboardCheck,LockKeyhole,Eye,Activity,Check,ExternalLink,Copy,RotateCcw,MessageCircle,CalendarDays,Filter,ArrowUpRight,Info,FileWarning,ShieldAlert,HeartHandshake,Database,Send,PanelLeftClose,Flag,BookMarked,Wrench} from "lucide-react";
 import {STARTER_CASES,STATUTES,CHARTER,caseChecks,scoreCase,formatDate,id,load,save,appendEvent,verifyCase,safeImport} from "./engine";
 import "./styles.css";
 import VaultView from "./Vault.jsx";
