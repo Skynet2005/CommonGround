@@ -54,3 +54,9 @@ The new tests exercise source validation, immutable rule-version snapshotting, i
 | P3 | Certified elections and processor-backed finance | Independent statutory and security certification, audited ledger reconciliation, processor integration |
 
 **Do not market current local records as independently adjudicated decisions or the platform as Florida-law-certified.** Independent review of law, security, data handling and accessibility is necessary before actual users rely on it.
+
+## Original document attachments (v0.6)
+
+Each RuleGraph source and Decision Passport can now carry one or more file attachments in the encrypted local Evidence Vault. Files are limited to 8 MB per item, with a separate encryption envelope for file contents and identifying metadata. Access requires the same user-provided workspace passphrase. Files are bound to the local source/passport identifier, not to an independently verified legal filing.
+
+**Back up these files separately using Evidence Vault's encrypted backup export.** Exporting the encrypted Operations metadata archive does not include source/passport attachment contents. File authenticity, custody, ownership, provenance and malware safety remain unverified by the platform.

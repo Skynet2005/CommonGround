@@ -2,6 +2,7 @@ import React,{useMemo,useState} from "react";
 import {BookOpen,FileCheck2,Scale,Users,ShieldCheck,Plus,Download,Info,AlertTriangle,CheckCircle2,FileText,Link2,ArrowRight,Search,LockKeyhole} from "lucide-react";
 import {trustOperation,passportChecks,comparePassports,passportExport,TRUST_NOTICE,TRUST_TYPES,TRUST_CATEGORIES,TRUST_SIDES,PASSPORT_STATUSES,REVIEW_STATUSES} from "./trust-engine.js";
 import "./trust-center.css";
+import TrustFiles from "./TrustFiles.jsx";
 
 const PANELS=[
  {id:"rules",title:"RuleGraph",icon:BookOpen,description:"Source versions and exact governing excerpts"},
@@ -66,7 +67,7 @@ function FormField({field,value,onChange,workspace}){
  }else control=<input type={type} required={!!required} value={value||""} onChange={e=>onChange(key,e.target.value)} maxLength="950"/>;
  return <label className="trust-field"><span>{label}{required?" *":""}</span>{control}</label>;
 }
-export default function TrustCenter({workspace,commit,busy}){
+export default function TrustCenter({workspace,commit,busy,passphrase}){
  const [panel,setPanel]=useState("rules"),[showForm,setShowForm]=useState(false),[form,setForm]=useState({});
  const [activeId,setActiveId]=useState(""),[query,setQuery]=useState(""),[edit,setEdit]=useState({});
  const rules=el(workspace.rules),passports=el(workspace.passports),positions=el(workspace.positions),reviews=el(workspace.neutralReviews);
@@ -104,7 +105,7 @@ export default function TrustCenter({workspace,commit,busy}){
   <label className="trust-search"><Search size={16}/><span className="sr-only">Filter Trust Center records</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search this module"/></label>
   {filtered.length?<div className="trust-records">{filtered.map(record=><article key={record.id} className="trust-record">
    <div className="trust-record-upper"><div><small>{panel==="rules"?record.kind:panel==="passports"?record.category:panel==="positions"?record.side:record.status}</small><h4>{record.title||record.documentReference||(record.statement?record.statement.slice(0,80):"")||record.reviewer}</h4><p>{panel==="rules"?record.documentReference+" · "+record.section:panel==="passports"?record.status:panel==="positions"?"Reference: "+(record.evidenceReference||"Not supplied"):"Disclosure: "+record.conflictDisclosure}</p></div>{panel==="passports"?<button type="button" className="trust-open" onClick={()=>{setActiveId(record.id);setPanel("passports");setEdit({})}}>Inspect <ArrowRight size={14}/></button>:null}</div>
-   {panel==="rules"?<><blockquote>{record.excerpt}</blockquote><p className="trust-small">Effective {safeDate(record.effectiveDate)} · SHA-256 {record.digest.slice(0,18)}… · <strong>User-entered source</strong></p>{record.sourceUrl?<a className="trust-source-link" href={record.sourceUrl} target="_blank" rel="noopener noreferrer"><Link2 size={13}/> Open entered source URL</a>:null}</>:null}
+   {panel==="rules"?<><blockquote>{record.excerpt}</blockquote><p className="trust-small">Effective {safeDate(record.effectiveDate)} · SHA-256 {record.digest.slice(0,18)}… · <strong>User-entered source</strong></p>{record.sourceUrl?<a className="trust-source-link" href={record.sourceUrl} target="_blank" rel="noopener noreferrer"><Link2 size={13}/> Open entered source URL</a>:null}<TrustFiles bucket={"trust-rule-"+record.id} passphrase={passphrase}/></>:null}
    {panel==="positions"?<p className="trust-note">{record.statement}</p>:null}
    {panel==="reviews"?<div className="trust-review-actions"><label><span>Review tracking</span><select disabled={busy||record.status==="Review closed"} value={record.status} onChange={e=>updateReview(record,e.target.value)}>{REVIEW_STATUSES.map(o=><option key={o}>{o}</option>)}</select></label><small>Proposed reviewer identity not verified</small></div>:null}
    <small className="trust-record-foot">{new Date(record.createdAt).toLocaleDateString()} · Encrypted local entry</small>
@@ -112,6 +113,7 @@ export default function TrustCenter({workspace,commit,busy}){
   {active&&panel==="passports"?<section className="trust-passport">
    <div className="trust-passport-top"><div><div className="eyebrow">DECISION PASSPORT · HUMAN REVIEW REQUIRED</div><h3>{active.title}</h3><p>{active.category} · {active.community||"Community not labeled"}</p></div><button type="button" className="btn outline" onClick={()=>{if(confirm("This decision package is an UNENCRYPTED JSON export containing sensitive case information. Save it privately?"))downloadPackage(passportExport(workspace,active.id))}}><Download size={14}/> Export complete record</button></div>
    <div className="trust-source-box"><b>Governing reference</b><p>{activeRule?.title||"Source missing"} · {active.ruleSection}</p><blockquote>{active.ruleExcerpt}</blockquote><small>Exact entered source snapshot: {active.ruleDigest.slice(0,26)}…</small></div>
+   <TrustFiles bucket={"trust-passport-"+active.id} passphrase={passphrase}/>
    <div className="trust-check-grid">{checks.map(check=><div key={check.label}><span>{check.complete?<CheckCircle2 size={16} color="#279b78"/>:<AlertTriangle size={16} color="#b77b43"/>}</span><div><b>{check.label}</b><p>{check.detail}</p></div></div>)}</div>
    <div className="trust-passport-columns"><div><h4>Recorded perspectives</h4>{pos.length?pos.map(x=><div key={x.id} className="trust-minor"><b>{x.side}</b><p>{x.statement}</p><small>Evidence ref: {x.evidenceReference||"None"}</small></div>):<p className="trust-small">No perspectives recorded yet.</p>}</div><div><h4>Proposed external reviews</h4>{rev.length?rev.map(x=><div className="trust-minor" key={x.id}><b>{x.reviewer}</b><p>{x.scope}</p><small>{x.status} · Disclosure recorded, not verified</small></div>):<p className="trust-small">No reviewer proposed yet.</p>}</div></div>
    {related.length?<div className="trust-comparisons"><p className="trust-info"><Scale size={15}/> {related.length} other passport(s) share this entered rule version, community and category. Differences warrant factual inquiry, not automatic misconduct conclusions.</p>{related.map(other=><div key={other.id} className="trust-comparison"><b>{other.title}</b><span>{other.status} · {other.category}</span><p><strong>Recorded remedy:</strong> {other.requestedOutcome}</p><p><strong>Documented response:</strong> {other.responseSummary||"Not recorded"}</p><p><strong>Reasoning:</strong> {other.reasoning||"Not recorded"}</p><small>Compare underlying facts, dates, exceptions and sources before drawing conclusions.</small></div>)}</div>:<p className="trust-small">No exact rule-version matches in this workspace. This does not establish whether enforcement was consistent.</p>}
