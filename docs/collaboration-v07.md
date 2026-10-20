@@ -27,3 +27,7 @@ No such production database or email provider is connected as of this release. T
 Verified email is not verified association membership, parcel title, property authority, board office, or neutral reviewer independence. Remote statements are stored in PostgreSQL and NOT end-to-end encrypted. Do not enter privileged mediation, legal strategy, private identification or sensitive health/banking data. Shared file uploads, malware scanning, externally authenticated evidence custody, true statutory legal service, binding elections and regulated payments remain unimplemented.
 
 Read docs/trust-center-v06.md for the encrypted local Trust Center and docs/deployment-runbook.md for operator setup. No real homeowner data should be put into the hosted beta until legal/privacy/security release gates are reviewed and signed off.
+
+## v0.7 abuse limits and readiness verification
+
+Database enforcement limits each verified actor to 60 case-room statements per case per rolling hour. The invitation issuer limits each case creator to 10 invitations per case and 30 invitations across all cases per 24 hours, including canceled attempts. Rate limits are backstops, not a substitute for provider-level anti-abuse, monitoring, recipient opt-out or platform DDoS defenses. The status API checks both table existence and runtime permissions before advertising collaboration readiness.

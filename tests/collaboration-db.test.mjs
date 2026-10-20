@@ -92,3 +92,14 @@ test("guest private notes stay hidden from the creator while both can acknowledg
   await assert.rejects(as(db,guest,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'shared','Revoked member tries to send')",[caseId,guest]),/policy/i);
  }finally{await db.close()}
 });
+
+test("database rejects excessive statements from one authenticated member",async()=>{
+ const db=await seeded();
+ try{
+  for(let i=0;i<60;i++){
+   await as(db,owner,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'shared',$3)",[caseId,owner,"Rate-test statement "+i]);
+  }
+  await assert.rejects(as(db,owner,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'shared','Excessive 61st statement')",[caseId,owner]),/Hourly case room note limit reached/);
+  assert.equal((await as(db,owner,"SELECT id FROM app.case_room_notes WHERE case_id=$1",[caseId])).rows.length,60);
+ }finally{await db.close()}
+});

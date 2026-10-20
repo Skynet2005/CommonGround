@@ -17,6 +17,26 @@ CREATE TABLE app.case_room_notes (
  UNIQUE(id,case_id)
 );
 CREATE INDEX case_room_notes_case ON app.case_room_notes(case_id,created_at,id);
+CREATE INDEX case_room_notes_actor_rate ON app.case_room_notes(case_id,author_id,created_at DESC);
+
+-- Database-side anti-flooding, in addition to mail invitation limits.
+CREATE FUNCTION app.case_room_note_rate() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=app,pg_temp AS $room_rate$
+BEGIN
+ IF app.current_actor() IS DISTINCT FROM NEW.author_id
+    OR NOT app.can_access_case(NEW.case_id) THEN
+  RAISE EXCEPTION 'Unauthorized room statement';
+ END IF;
+ IF (SELECT count(*) FROM app.case_room_notes n
+   WHERE n.case_id=NEW.case_id AND n.author_id=NEW.author_id
+   AND n.created_at>now()-interval '1 hour')>=60 THEN
+  RAISE EXCEPTION 'Hourly case room note limit reached';
+ END IF;
+ RETURN NEW;
+END $room_rate$;
+CREATE TRIGGER enforce_room_note_rate BEFORE INSERT ON app.case_room_notes
+ FOR EACH ROW EXECUTE FUNCTION app.case_room_note_rate();
+REVOKE ALL ON FUNCTION app.case_room_note_rate() FROM PUBLIC;
 CREATE TRIGGER prevent_case_room_notes_edit
  BEFORE UPDATE OR DELETE ON app.case_room_notes
  FOR EACH ROW EXECUTE FUNCTION app.prevent_event_mutation();
@@ -96,6 +116,10 @@ BEGIN
      WHERE case_id=target AND created_by=actor
       AND created_at>now()-interval '1 day')>=10 THEN
   RAISE EXCEPTION 'Daily invitation limit reached';
+ END IF;
+ IF (SELECT count(*) FROM app.case_invites
+     WHERE created_by=actor AND created_at>now()-interval '1 day')>=30 THEN
+  RAISE EXCEPTION 'Account daily invitation limit reached';
  END IF;
  INSERT INTO app.case_invites(
   case_id,invitee_email,invitee_email_digest,invite_token_digest,
