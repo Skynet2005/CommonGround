@@ -17,4 +17,15 @@ GRANT EXECUTE ON FUNCTION app.auth_cancel_link(uuid,text) TO commonground_runtim
 GRANT EXECUTE ON FUNCTION app.auth_accept_link(text,text) TO commonground_runtime;
 GRANT EXECUTE ON FUNCTION app.auth_session_account(text) TO commonground_runtime;
 GRANT EXECUTE ON FUNCTION app.auth_revoke_session(text) TO commonground_runtime;
+-- Collaboration grants: participant-only room content, no raw invitation access.
+REVOKE ALL ON app.case_invites,app.case_room_access_events FROM commonground_runtime;
+GRANT SELECT,INSERT ON app.case_room_notes TO commonground_runtime;
+GRANT SELECT,INSERT ON app.case_room_receipts TO commonground_runtime;
+GRANT SELECT ON app.case_room_access_events TO commonground_runtime;
+GRANT EXECUTE ON FUNCTION app.case_issue_invite(uuid,text,text,text) TO commonground_runtime;
+GRANT EXECUTE ON FUNCTION app.case_cancel_invite(uuid) TO commonground_runtime;
+GRANT EXECUTE ON FUNCTION app.case_pending_invites(uuid) TO commonground_runtime;
+GRANT EXECUTE ON FUNCTION app.case_accept_invite(text) TO commonground_runtime;
+GRANT EXECUTE ON FUNCTION app.case_revoke_participant(uuid,uuid) TO commonground_runtime;
+GRANT EXECUTE ON FUNCTION app.case_room_members(uuid) TO commonground_runtime;
 COMMIT;
