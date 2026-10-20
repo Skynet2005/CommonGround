@@ -73,3 +73,22 @@ test("notes isolate case membership, private authors and receipts; revocation cl
   assert.equal(oldInvite.rows.length,0);
  }finally{await db.close()}
 });
+
+test("guest private notes stay hidden from the creator while both can acknowledge shared notes",async()=>{
+ const db=await seeded();
+ try{
+  await as(db,owner,"SELECT app.case_issue_invite($1,$2,$3,$4)",[caseId,"guest@example.test",token,fingerprint]);
+  await as(db,guest,"SELECT * FROM app.case_accept_invite($1)",[token]);
+  await as(db,guest,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'private','Guest private note not for association')",[caseId,guest]);
+  assert.equal((await as(db,owner,"SELECT id FROM app.case_room_notes WHERE case_id=$1",[caseId])).rows.length,0);
+  const visible=await as(db,guest,"SELECT id FROM app.case_room_notes WHERE case_id=$1",[caseId]);
+  assert.equal(visible.rows.length,1);
+  const shared=await as(db,guest,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'shared','Guest shares a fact in the room') RETURNING id",[caseId,guest]);
+  const noteId=shared.rows[0].id;
+  assert.equal((await as(db,owner,"SELECT id FROM app.case_room_notes WHERE case_id=$1",[caseId])).rows.length,1);
+  await as(db,owner,"INSERT INTO app.case_room_receipts(note_id,case_id,acknowledged_by) VALUES($1,$2,$3)",[noteId,caseId,owner]);
+  await assert.rejects(as(db,guest,"INSERT INTO app.case_room_receipts(note_id,case_id,acknowledged_by) VALUES($1,$2,$3)",[noteId,caseId,guest]),/policy/i);
+  await as(db,owner,"SELECT app.case_revoke_participant($1,$2)",[caseId,guest]);
+  await assert.rejects(as(db,guest,"INSERT INTO app.case_room_notes(case_id,author_id,visibility,statement) VALUES($1,$2,'shared','Revoked member tries to send')",[caseId,guest]),/policy/i);
+ }finally{await db.close()}
+});
